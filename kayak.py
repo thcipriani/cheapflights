@@ -31,6 +31,8 @@ import airportsdata
 from math import sin, cos, sqrt, atan2, radians
 
 
+MAJOR_AIRPORTS = []
+
 
 def scrape(origin, destination, startdate, enddate, sleep=30):
     # I want cheapest, not best :)
@@ -90,14 +92,18 @@ def scrape(origin, destination, startdate, enddate, sleep=30):
     driver.close()
 
     try:
+        cheapest = min(prices)
         avg_price = sum(prices)/len(prices)
+        fastest = min(durations)
         avg_duration = sum(durations)/len(durations)
         print(f'Avg. Price: {avg_price}')
+        print(f'Min Price: {cheapest}')
         print(f'Avg. Duration: {avg_duration}')
+        print(f'Min Duration: {fastest}')
         print()
-        return avg_price, avg_duration
+        return avg_price, cheapest, avg_duration, fastest
     except:
-        return 0, 0
+        return 'NA', 'NA'
 
 
 def lat_long(city):
@@ -117,14 +123,15 @@ def distance_from_airport(lat, lon, lat2, lon2):
 
 
 def filter_major_airports(airports):
+    if MAJOR_AIRPORTS:
+        return MAJOR_AIRPORTS
     data = requests.get('http://www.airportcodes.org/').content
     cities_and_codes =re.findall(r'([A-Za-z, ]+)\(([A-Z]{3})\)', data.decode('utf8'))
-    major_airports = []
     for code in cities_and_codes:
         ap = airports.get(code[-1])
         if ap is not None:
-            major_airports.append(ap)
-    return major_airports
+            MAJOR_AIRPORTS.append(ap)
+    return MAJOR_AIRPORTS
 
 
 def find_airport(city):
@@ -164,23 +171,34 @@ if __name__ == '__main__':
 
     prices = {}
     travel_times = {}
+    cheapests = {}
+    fastests = {}
 
     with open(args.origin) as f:
-        origins = [l for l in f.readlines() if not l.startswith('#')]
+        origins = [l.strip() for l in f.readlines() if not l.startswith('#')]
 
     with open(args.destination) as f:
-        destinations =  [l for l in f.readlines() if not l.startswith('#')]
+        destinations =  [l.strip() for l in f.readlines() if not l.startswith('#')]
 
     for destination in destinations:
         for origin in origins:
-            dest = find_airport(destination)
-            orig = find_airport(origin)
+
+            if len(destination) == 3:
+                dest = destination
+            else:
+                dest = find_airport(destination)
+
+            if len(origin) == 3:
+                orig = origin
+            else:
+                orig = find_airport(origin)
+
             print('Scraping for origin: {} and destination: {}, for date: {}'.format(
                 orig,
                 dest,
                 startdate,
             ))
-            avg_price, avg_hour = scrape(
+            avg_price, cheapest, avg_hour, fastest = scrape(
                 origin=orig,
                 destination=dest,
                 startdate=startdate,
@@ -189,12 +207,22 @@ if __name__ == '__main__':
             )
             prices.setdefault(f'{orig}', {})
             travel_times.setdefault(f'{orig}', {})
+            cheapests.setdefault(f'{orig}', {})
+            fastests.setdefault(f'{orig}', {})
             prices[f'{orig}'][f'{dest}'] = avg_price
             travel_times[f'{orig}'][f'{dest}'] = avg_hour
+            cheapests[f'{orig}'][f'{dest}'] = cheapest
+            fastests[f'{orig}'][f'{dest}'] = fastest
 
-        df = pd.DataFrame.from_dict(prices)
-        df.to_csv('data/price.csv')
+    df = pd.DataFrame.from_dict(prices)
+    df.to_csv(f'data/avg-price.csv')
 
-        df2 = pd.DataFrame.from_dict(travel_times)
-        df2.to_csv('data/travel_time.csv')
-        print('DONE!')
+    df2 = pd.DataFrame.from_dict(travel_times)
+    df2.to_csv(f'data/avg-travel_time.csv')
+
+    df3 = pd.DataFrame.from_dict(cheapests)
+    df3.to_csv(f'data/cheapest.csv')
+
+    df4 = pd.DataFrame.from_dict(fastests)
+    df4.to_csv(f'data/fastest.csv')
+    print('DONE!')
