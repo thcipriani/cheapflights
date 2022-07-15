@@ -161,10 +161,10 @@ if __name__ == '__main__':
     travel_times = {}
 
     with open(args.origin) as f:
-        origins = f.readlines()
+        origins = [l for l in f.readlines() if not l.startswith('#')]
 
     with open(args.destination) as f:
-        destinations = f.readlines()
+        destinations =  [l for l in f.readlines() if not l.startswith('#')]
 
     for destination in destinations:
         for origin in origins:
@@ -184,12 +184,12 @@ if __name__ == '__main__':
             )
             prices.setdefault(f'{orig}', {})
             travel_times.setdefault(f'{orig}', {})
-            prices[f'{orig}'][f'{dest}'] = avg_price,
+            prices[f'{orig}'][f'{dest}'] = avg_price
             travel_times[f'{orig}'][f'{dest}'] = avg_hour
 
         df = pd.DataFrame.from_dict(prices)
-        df.to_csv('price.csv')
+        df.to_csv('data/price.csv')
 
         df2 = pd.DataFrame.from_dict(travel_times)
-        df2.to_csv('travel_time.csv')
+        df2.to_csv('data/travel_time.csv')
         print('DONE!')
