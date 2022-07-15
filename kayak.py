@@ -90,7 +90,12 @@ def scrape(origin, destination, startdate, enddate, sleep=30):
     driver.close()
 
     try:
-        return sum(prices)/len(prices), sum(durations)/len(durations)
+        avg_price = sum(prices)/len(prices)
+        avg_duration = sum(durations)/len(durations)
+        print(f'Avg. Price: {avg_price}')
+        print(f'Avg. Duration: {avg_duration}')
+        print()
+        return avg_price, avg_duration
     except:
         return 0, 0
 
